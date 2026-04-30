@@ -18,8 +18,8 @@ router.post("/signup", validate(signupSchema), async (req, res) => {
     id: createId("usr"),
     name: req.body.name,
     email: req.body.email,
-    passwordHash: await bcrypt.hash(req.body.password, 10),
-    role: db.users.length === 0 ? "ADMIN" : "MEMBER",
+    passwordHash: await bcrypt.hash(req.body.password, 12),
+    role: "MEMBER",
     status: "ONLINE",
     createdAt: now
   };
@@ -42,7 +42,7 @@ router.post("/signup", validate(signupSchema), async (req, res) => {
 router.post("/login", validate(loginSchema), async (req, res) => {
   const db = await readDb();
   const user = db.users.find((item) => item.email === req.body.email);
-  if (!user || !(await bcrypt.compare(req.body.password, user.passwordHash))) {
+  if (!user || !user.passwordHash || !(await bcrypt.compare(req.body.password, user.passwordHash))) {
     return res.status(401).json({ message: "Invalid email or password" });
   }
 

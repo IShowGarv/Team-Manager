@@ -1,12 +1,13 @@
 # TaskFlow - Glass Flow Team Task Manager
 
-TaskFlow is a full-stack team task manager rebuilt from the provided Glass Flow PRD and UI references. It includes authentication, project and team management, task assignment, role-based access, dashboard metrics, activity tracking, and a Railway-ready deployment setup.
+TaskFlow is a production-ready full-stack team task manager rebuilt from the provided Glass Flow PRD and UI references. It includes authentication, project and team management, task assignment, role-based access, dashboard metrics, activity tracking, and a Railway-ready deployment setup.
 
 ## Features
 
 - Dark Glass Flow UI with translucent panels, neon cyan/violet accents, and responsive layouts
-- Signup/login with JWT authentication and bcrypt password hashing
+- Signup/login with JWT authentication, bcrypt password hashing, and strong password validation
 - Admin/Member RBAC
+- Production-safe admin setup through environment variables
 - Admin project creation and member invites
 - Task creation, assignment, priority, due dates, and status tracking
 - Member task status updates for assigned work
@@ -14,6 +15,7 @@ TaskFlow is a full-stack team task manager rebuilt from the provided Glass Flow 
 - Activity timeline and task distribution chart
 - Search/filter experiences for projects, tasks, and team members
 - REST API with persisted document database relationships and Zod validation
+- Helmet security headers, restricted CORS, and API rate limiting
 
 ## Tech Stack
 
@@ -28,17 +30,20 @@ TaskFlow is a full-stack team task manager rebuilt from the provided Glass Flow 
 ```bash
 npm install
 copy .env.example .env
-npm run db:seed
+npm run setup:admin
 npm run dev
 ```
 
 Frontend dev URL: `http://localhost:5173`  
 API URL: `http://localhost:8080/api`
 
-Demo accounts:
+No demo accounts are shipped. Create your first admin with:
 
-- Admin: `admin@taskflow.dev` / `Admin123!`
-- Member: `member@taskflow.dev` / `Member123!`
+```bash
+npm run setup:admin
+```
+
+Set `ADMIN_NAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` in `.env` before running it.
 
 ## Production Build
 
@@ -57,16 +62,29 @@ Production URL after start: `http://localhost:8080`
 
 ```env
 JWT_SECRET=replace-with-a-long-random-secret
+CLIENT_ORIGIN=https://your-railway-app-url.up.railway.app
+DATA_FILE=/data/taskflow-db.json
+ADMIN_NAME=Your Name
+ADMIN_EMAIL=you@example.com
+ADMIN_PASSWORD=replace-with-a-strong-password
 ```
 
-4. Railway will run the configured build and start commands:
+4. Add a Railway persistent volume mounted at `/data` so uploaded production data survives restarts and redeploys.
+
+5. After the first deploy, run this once from the Railway shell to create your admin:
+
+```bash
+npm run setup:admin
+```
+
+6. Railway will run the configured build and start commands:
 
 ```bash
 npm run build
 npm start
 ```
 
-The app creates and seeds the local document database automatically on first start.
+The app creates an empty local document database automatically on first start. It does not ship public demo users or demo tasks.
 
 ## REST API
 

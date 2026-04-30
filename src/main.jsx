@@ -134,7 +134,7 @@ function AuthScreen({ onAuth }) {
                 placeholder="••••••••"
                 value={form.password}
                 onChange={(event) => setForm({ ...form, password: event.target.value })}
-                minLength={mode === "signup" ? 8 : 1}
+                minLength={mode === "signup" ? 12 : 1}
                 required
               />
             </span>
@@ -144,7 +144,7 @@ function AuthScreen({ onAuth }) {
             {loading ? "Processing" : mode === "login" ? "Sign In" : "Create Account"}
             <Sparkles size={18} />
           </button>
-          <small>Demo admin: admin@taskflow.dev / Admin123!</small>
+          <small>Use your workspace credentials. New public accounts start as Members.</small>
         </form>
       </section>
       <footer className="auth-footer">
@@ -714,7 +714,7 @@ function App() {
         {view === "settings" && (
           <section className="glass-panel settings-panel">
             <h2>Deployment Ready</h2>
-            <p>Railway uses the included build and start commands. Set JWT_SECRET in Railway variables, then deploy from GitHub.</p>
+            <p>Railway uses the included build and start commands. Set JWT_SECRET and create your admin account before inviting the team.</p>
             <div className="settings-grid">
               <span>REST API</span><b>/api</b>
               <span>Database</span><b>File NoSQL</b>
