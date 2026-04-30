@@ -30,20 +30,13 @@ TaskFlow is a production-ready full-stack team task manager rebuilt from the pro
 ```bash
 npm install
 copy .env.example .env
-npm run setup:admin
 npm run dev
 ```
 
 Frontend dev URL: `http://localhost:5173`  
 API URL: `http://localhost:8080/api`
 
-No demo accounts are shipped. Create your first admin with:
-
-```bash
-npm run setup:admin
-```
-
-Set `ADMIN_NAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` in `.env` before running it.
+No demo accounts are shipped. Set `ADMIN_NAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` in `.env`; the server creates or updates that admin automatically on startup.
 
 ## Production Build
 
@@ -71,20 +64,14 @@ ADMIN_PASSWORD=replace-with-a-strong-password
 
 4. Add a Railway persistent volume mounted at `/data` so uploaded production data survives restarts and redeploys.
 
-5. After the first deploy, run this once from the Railway shell to create your admin:
-
-```bash
-npm run setup:admin
-```
-
-6. Railway will run the configured build and start commands:
+5. Railway will run the configured build and start commands:
 
 ```bash
 npm run build
 npm start
 ```
 
-The app creates an empty local document database automatically on first start. It does not ship public demo users or demo tasks.
+The app creates an empty local document database automatically on first start, then creates or updates the admin account from `ADMIN_*` environment variables. It does not ship public demo users or demo tasks.
 
 ## REST API
 

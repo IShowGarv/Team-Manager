@@ -10,6 +10,7 @@ import dashboardRoutes from "./routes/dashboard.js";
 import projectRoutes from "./routes/projects.js";
 import taskRoutes from "./routes/tasks.js";
 import userRoutes from "./routes/users.js";
+import { initializeAdminFromEnv } from "./admin.js";
 import { readDb } from "./store.js";
 
 process.env.DATA_FILE ||= "./data/taskflow-db.json";
@@ -75,6 +76,10 @@ app.use((err, _req, res, _next) => {
 });
 
 await readDb();
+const admin = await initializeAdminFromEnv();
+if (admin) {
+  console.log(`Admin initialized from environment: ${admin.email}`);
+}
 
 app.listen(port, () => {
   console.log(`TaskFlow running on port ${port}`);
