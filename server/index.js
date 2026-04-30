@@ -12,6 +12,7 @@ import taskRoutes from "./routes/tasks.js";
 import userRoutes from "./routes/users.js";
 import { initializeAdminFromEnv } from "./admin.js";
 import { readDb } from "./store.js";
+import { initDb } from "./db.js";
 
 process.env.DATA_FILE ||= "./data/taskflow-db.json";
 
@@ -75,6 +76,7 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ message: "Something went wrong" });
 });
 
+await initDb();
 await readDb();
 const admin = await initializeAdminFromEnv();
 if (admin) {

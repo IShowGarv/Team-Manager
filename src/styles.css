@@ -551,7 +551,22 @@ option {
 }
 
 .task-composer {
-  grid-template-columns: 1fr 1.3fr 180px 170px 130px 150px auto;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+@media (max-width: 1400px) {
+  .task-composer {
+    grid-template-columns: 1fr 1.3fr repeat(auto-fit, minmax(140px, 1fr));
+  }
+}
+
+@media (max-width: 1000px) {
+  .task-composer {
+    grid-template-columns: 1fr 1fr;
+  }
+  .task-composer > *:last-child {
+    grid-column: span 2;
+  }
 }
 
 .chips {

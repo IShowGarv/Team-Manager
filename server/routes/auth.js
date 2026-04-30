@@ -1,15 +1,15 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { requireAuth } from "../middleware/auth.js";
-import { createId, readDb, stripSecret, writeDb } from "../store.js";
+import { createId, db, stripSecret } from "../store.js";
 import { loginSchema, signupSchema, validate } from "../validation.js";
 import { signToken } from "../utils.js";
 
 const router = Router();
 
 router.post("/signup", validate(signupSchema), async (req, res) => {
-  const db = await readDb();
-  if (db.users.some((user) => user.email === req.body.email)) {
+  const existing = await db.users.findByEmail(req.body.email);
+  if (existing) {
     return res.status(409).json({ message: "Email is already registered" });
   }
 
@@ -20,39 +20,25 @@ router.post("/signup", validate(signupSchema), async (req, res) => {
     email: req.body.email,
     passwordHash: await bcrypt.hash(req.body.password, 12),
     role: "MEMBER",
-    status: "ONLINE",
-    createdAt: now
+    status: "ONLINE"
   };
 
-  await writeDb((draft) => {
-    draft.users.push(user);
-    draft.activities.push({
-      id: createId("act"),
-      actorId: user.id,
-      action: "joined",
-      detail: "TaskFlow workspace",
-      createdAt: now
-    });
-    return draft;
-  });
+  await db.users.create(user);
+  await db.activities.log(user.id, "joined", "TaskFlow workspace");
 
   res.status(201).json({ user: stripSecret(user), token: signToken(user) });
 });
 
 router.post("/login", validate(loginSchema), async (req, res) => {
-  const db = await readDb();
-  const user = db.users.find((item) => item.email === req.body.email);
+  const user = await db.users.findByEmail(req.body.email);
   if (!user || !user.passwordHash || !(await bcrypt.compare(req.body.password, user.passwordHash))) {
     return res.status(401).json({ message: "Invalid email or password" });
   }
 
-  await writeDb((draft) => {
-    const found = draft.users.find((item) => item.id === user.id);
-    found.status = "ONLINE";
-    return draft;
-  });
+  await db.users.updateStatus(user.id, "ONLINE");
+  const updatedUser = { ...user, status: "ONLINE" };
 
-  res.json({ user: stripSecret({ ...user, status: "ONLINE" }), token: signToken(user) });
+  res.json({ user: stripSecret(updatedUser), token: signToken(updatedUser) });
 });
 
 router.get("/me", requireAuth, (req, res) => {
