@@ -396,7 +396,7 @@ function ProjectCard({ project }) {
   );
 }
 
-function TaskBoard({ tasks, projects, user, admin, onCreate, onStatus }) {
+function TaskBoard({ tasks, projects, users, user, admin, onCreate, onStatus }) {
   const [query, setQuery] = useState("");
   const filtered = tasks.filter((task) => task.title.toLowerCase().includes(query.toLowerCase()));
   const grouped = {
@@ -417,7 +417,7 @@ function TaskBoard({ tasks, projects, user, admin, onCreate, onStatus }) {
           Filter
         </button>
       </div>
-      {admin && projects.length > 0 && <TaskComposer projects={projects} onCreate={onCreate} />}
+      {admin && projects.length > 0 && <TaskComposer projects={projects} users={users} onCreate={onCreate} />}
       <section className="kanban">
         {Object.entries(grouped).map(([status, items]) => (
           <div className="kanban-column" key={status}>
@@ -436,7 +436,7 @@ function TaskBoard({ tasks, projects, user, admin, onCreate, onStatus }) {
   );
 }
 
-function TaskComposer({ projects, onCreate }) {
+function TaskComposer({ projects, users, onCreate }) {
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -446,11 +446,6 @@ function TaskComposer({ projects, onCreate }) {
     projectId: projects[0]?.id || "",
     assigneeId: ""
   });
-  const selected = projects.find((project) => project.id === form.projectId) || projects[0];
-
-  useEffect(() => {
-    if (!form.projectId && projects[0]) setForm((current) => ({ ...current, projectId: projects[0].id }));
-  }, [projects, form.projectId]);
 
   async function submit(event) {
     event.preventDefault();
@@ -462,7 +457,7 @@ function TaskComposer({ projects, onCreate }) {
     <form className="composer task-composer glass-panel" onSubmit={submit}>
       <input placeholder="Task title" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} required />
       <input placeholder="Task detail" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} required />
-      <select value={form.projectId} onChange={(event) => setForm({ ...form, projectId: event.target.value, assigneeId: "" })}>
+      <select value={form.projectId} onChange={(event) => setForm({ ...form, projectId: event.target.value })}>
         {projects.map((project) => (
           <option value={project.id} key={project.id}>
             {project.name}
@@ -471,9 +466,9 @@ function TaskComposer({ projects, onCreate }) {
       </select>
       <select value={form.assigneeId} onChange={(event) => setForm({ ...form, assigneeId: event.target.value })}>
         <option value="">Unassigned</option>
-        {(selected?.members || []).map((member) => (
-          <option value={member.user.id} key={member.user.id}>
-            {member.user.name}
+        {users.map((user) => (
+          <option value={user.id} key={user.id}>
+            {user.name}
           </option>
         ))}
       </select>
@@ -697,6 +692,7 @@ function App() {
           <TaskBoard
             tasks={tasks}
             projects={projects}
+            users={users}
             user={user}
             admin={admin}
             onCreate={(form) => mutate("Task created", () => api("/tasks", { method: "POST", body: JSON.stringify(form) }))}

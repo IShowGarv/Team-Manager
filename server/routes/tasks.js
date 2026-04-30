@@ -31,7 +31,7 @@ router.post("/", requireAdmin, validate(taskSchema), async (req, res) => {
   if (req.body.assigneeId) {
     const memberships = await db.memberships.getByProject(project.id);
     if (!memberships.some((m) => m.userId === req.body.assigneeId)) {
-      return res.status(400).json({ message: "Assignee must be a project member" });
+      await db.memberships.add(project.id, req.body.assigneeId);
     }
   }
 
