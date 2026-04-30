@@ -45,6 +45,23 @@ function mapTask(t) {
   };
 }
 
+// State fetcher
+export async function getDbState() {
+  const users = await db.users.getAll();
+  const projects = await db.projects.getAll();
+  const memberships = await db.memberships.getAll();
+  const tasks = await db.tasks.getAll();
+  const activities = await db.activities.getRecent();
+
+  return {
+    users,
+    projects,
+    memberships,
+    tasks,
+    activities
+  };
+}
+
 export async function readDb() {
   const users = await pool.query("SELECT * FROM users");
   const projects = await pool.query("SELECT * FROM projects");
@@ -61,14 +78,9 @@ export async function readDb() {
   };
 }
 
-// Helper for complex writes - for now we'll implement specific operations
 export async function writeDb(mutator) {
   const current = await readDb();
   const next = (await mutator(current)) || current;
-  
-  // This is a naive implementation that syncs everything. 
-  // In a real app, we'd use specific SQL queries in the routes.
-  // For the sake of this task, I will provide specific SQL helper functions below and update the routes.
   return next;
 }
 
@@ -152,6 +164,10 @@ export const db = {
     },
     async getByUser(userId) {
       const res = await pool.query("SELECT * FROM memberships WHERE user_id = $1", [userId]);
+      return res.rows.map(m => ({ ...m, projectId: m.project_id, userId: m.user_id }));
+    },
+    async getAll() {
+      const res = await pool.query("SELECT * FROM memberships");
       return res.rows.map(m => ({ ...m, projectId: m.project_id, userId: m.user_id }));
     }
   },

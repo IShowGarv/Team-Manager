@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
-import { hydrateTask, projectIdsForUser, readDb, stripSecret } from "../store.js";
+import { getDbState, hydrateTask, projectIdsForUser, stripSecret } from "../store.js";
 import { overdue } from "../utils.js";
 
 const router = Router();
 
 router.get("/", requireAuth, async (req, res) => {
-  const db = await readDb();
+  const db = await getDbState();
   const visibleProjectIds = req.user.role === "ADMIN" ? db.projects.map((project) => project.id) : projectIdsForUser(db, req.user.id);
   const projects = db.projects.filter((project) => visibleProjectIds.includes(project.id));
   const tasks = db.tasks

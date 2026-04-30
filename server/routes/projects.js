@@ -1,50 +1,42 @@
 import { Router } from "express";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
-import { createId, hydrateProject, readDb, stripSecret, writeDb } from "../store.js";
+import { db, stripSecret, createId, hydrateProject, getDbState } from "../store.js";
 import { memberSchema, projectSchema, validate } from "../validation.js";
 
 const router = Router();
 router.use(requireAuth);
 
 router.get("/", async (req, res) => {
-  const db = await readDb();
+  const all = await getDbState();
   const visible = req.user.role === "ADMIN"
-    ? db.projects
-    : db.projects.filter((project) => db.memberships.some((member) => member.projectId === project.id && member.userId === req.user.id));
-  res.json({ projects: visible.map((project) => hydrateProject(db, project)) });
+    ? all.projects
+    : all.projects.filter((project) => all.memberships.some((member) => member.projectId === project.id && member.userId === req.user.id));
+  res.json({ projects: visible.map((project) => hydrateProject(all, project)) });
 });
 
 router.post("/", requireAdmin, validate(projectSchema), async (req, res) => {
-  const now = new Date().toISOString();
   const project = {
     id: createId("prj"),
     name: req.body.name,
     description: req.body.description,
     category: req.body.category,
     status: "ACTIVE",
-    ownerId: req.user.id,
-    createdAt: now,
-    updatedAt: now
+    ownerId: req.user.id
   };
 
-  await writeDb((draft) => {
-    draft.projects.push(project);
-    draft.memberships.push({ id: createId("mem"), projectId: project.id, userId: req.user.id, createdAt: now });
-    draft.activities.push({ id: createId("act"), actorId: req.user.id, action: "created project", detail: project.name, createdAt: now });
-    return draft;
-  });
+  await db.projects.create(project);
+  await db.memberships.add(project.id, req.user.id);
+  await db.activities.log(req.user.id, "created project", project.name);
 
-  const db = await readDb();
-  res.status(201).json({ project: hydrateProject(db, project) });
+  const all = await getDbState();
+  res.status(201).json({ project: hydrateProject(all, project) });
 });
 
 router.post("/:projectId/members", requireAdmin, validate(memberSchema), async (req, res) => {
-  const db = await readDb();
-  const project = db.projects.find((item) => item.id === req.params.projectId);
+  const project = await db.projects.findById(req.params.projectId);
   if (!project) return res.status(404).json({ message: "Project not found" });
 
-  const now = new Date().toISOString();
-  let user = db.users.find((item) => item.email === req.body.email);
+  let user = await db.users.findByEmail(req.body.email);
   if (!user) {
     user = {
       id: createId("usr"),
@@ -52,19 +44,13 @@ router.post("/:projectId/members", requireAdmin, validate(memberSchema), async (
       email: req.body.email,
       passwordHash: "",
       role: req.body.role,
-      status: "INVITED",
-      createdAt: now
+      status: "INVITED"
     };
+    await db.users.create(user);
   }
 
-  await writeDb((draft) => {
-    if (!draft.users.some((item) => item.id === user.id)) draft.users.push(user);
-    if (!draft.memberships.some((item) => item.projectId === project.id && item.userId === user.id)) {
-      draft.memberships.push({ id: createId("mem"), projectId: project.id, userId: user.id, createdAt: now });
-    }
-    draft.activities.push({ id: createId("act"), actorId: req.user.id, action: "invited", detail: `${user.email} to ${project.name}`, createdAt: now });
-    return draft;
-  });
+  await db.memberships.add(project.id, user.id);
+  await db.activities.log(req.user.id, "invited", `${user.email} to ${project.name}`);
 
   res.status(201).json({
     member: { projectId: project.id, userId: user.id, user: stripSecret(user) }

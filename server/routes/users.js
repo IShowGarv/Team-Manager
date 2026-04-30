@@ -1,24 +1,18 @@
 import { Router } from "express";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
-import { createId, readDb, stripSecret, writeDb } from "../store.js";
+import { db, stripSecret, createId } from "../store.js";
 import { memberSchema, roleSchema, validate } from "../validation.js";
 
 const router = Router();
 router.use(requireAuth);
 
 router.get("/", async (_req, res) => {
-  const db = await readDb();
-  const users = db.users
-    .slice()
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .map(stripSecret);
-  res.json({ users });
+  const users = await db.users.getAll();
+  res.json({ users: users.map(stripSecret) });
 });
 
 router.post("/invite", requireAdmin, validate(memberSchema), async (req, res) => {
-  const db = await readDb();
-  const now = new Date().toISOString();
-  let user = db.users.find((item) => item.email === req.body.email);
+  let user = await db.users.findByEmail(req.body.email);
   if (!user) {
     user = {
       id: createId("usr"),
@@ -26,34 +20,27 @@ router.post("/invite", requireAdmin, validate(memberSchema), async (req, res) =>
       email: req.body.email,
       passwordHash: "",
       role: req.body.role,
-      status: "INVITED",
-      createdAt: now
+      status: "INVITED"
     };
+    await db.users.create(user);
+  } else {
+    await db.users.updateRole(user.id, req.body.role);
+    user.role = req.body.role;
   }
 
-  await writeDb((draft) => {
-    const existing = draft.users.find((item) => item.email === user.email);
-    if (existing) existing.role = req.body.role;
-    else draft.users.push(user);
-    draft.activities.push({ id: createId("act"), actorId: req.user.id, action: "invited member", detail: user.email, createdAt: now });
-    return draft;
-  });
+  await db.activities.log(req.user.id, "invited member", user.email);
 
-  res.status(201).json({ user: stripSecret({ ...user, role: req.body.role }) });
+  res.status(201).json({ user: stripSecret(user) });
 });
 
 router.patch("/:userId/role", requireAdmin, validate(roleSchema), async (req, res) => {
-  const db = await readDb();
-  if (!db.users.some((user) => user.id === req.params.userId)) return res.status(404).json({ message: "User not found" });
+  const user = await db.users.findById(req.params.userId);
+  if (!user) return res.status(404).json({ message: "User not found" });
 
-  await writeDb((draft) => {
-    const user = draft.users.find((item) => item.id === req.params.userId);
-    user.role = req.body.role;
-    return draft;
-  });
+  await db.users.updateRole(user.id, req.body.role);
+  const updated = await db.users.findById(user.id);
 
-  const next = await readDb();
-  res.json({ user: stripSecret(next.users.find((user) => user.id === req.params.userId)) });
+  res.json({ user: stripSecret(updated) });
 });
 
 export default router;
